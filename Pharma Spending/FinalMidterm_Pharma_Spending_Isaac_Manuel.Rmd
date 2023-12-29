@@ -1,0 +1,430 @@
+---
+title: "Pharmaceutical Spending and The Great Recession"
+author: "Isaac Cuesta and Manuel Morillo"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(kableExtra)
+library(ggplot2)
+library(ggrepel)
+library(forcats)
+library(dplyr)
+library(broom)
+#library()
+
+#load more packages here as necessary
+```
+
+```{r}
+#Import the Data 
+drug_spending <- read.csv("drug_spending.csv")
+#data(drug_spending)
+#drug_spending
+#install.packages("devtools")
+#library(devtools)
+#devtools::install_github("r-lib/conflicted")
+
+```
+
+
+#Data Fomatting
+```{r}
+
+    
+#ADDING REGIONS
+#ISAAC CUESTA
+drug_spending <- drug_spending %>%
+  drop_na() %>%
+  mutate(AMERICAS = ifelse(LOCATION %in% c("USA","MEX","CAN","CHE"), "Yes", "No")) %>%
+  mutate(EUROPE = ifelse(LOCATION %in% c("TUR","SWE","SVN","SVK","PRN","POL","NOR","NLD","LVA","LUX","LTU","ITA","ISL","IRL","HUN","GRC","GBR","FRA","FIN","EST","ESP","DNK","DEU","CZE","BEL", "AUT", "PRT"), "Yes", "No")) %>%
+  mutate(OTHER = ifelse(LOCATION %in% c("KOR", "JAP","AUS", "ISR"), "Yes", "No"))
+
+```
+
+```{r}
+#ISAAC CUESTA
+  #MAKING NEW DATA WITH TOP TEN HIGHEST PER CAPITA SPENDING in 2000
+  top_spending <- drug_spending %>%
+    select(TIME, LOCATION, USD_CAP) %>%
+    arrange(desc(USD_CAP)) %>%
+    filter(TIME == 2000) %>%
+    slice(1:10) %>%
+    mutate(highestgdpspend = LOCATION)
+
+
+#MAKING NEW DATA WITH TEN LOWEST PER CAPITA SPENDING in 1996
+
+  bottom_spending <- drug_spending %>%
+    select(TIME, LOCATION, USD_CAP) %>%
+    arrange((USD_CAP)) %>%
+    filter(TIME == 2000) %>%
+    slice(1:10) %>%
+    mutate(lowestgdpspend = LOCATION)
+  
+    
+```
+
+## Exploratory Charts
+
+```{r}
+#MANUEL MORILLO
+#TOTAL HEALTH SPENDING RATE OVER TIME 
+library(ggplot2)
+
+ gentime <- drug_spending %>%
+   group_by(LOCATION) %>%
+   summarise(tspend = sum(TOTAL_SPEND), totalmeangdp = sum(mean(PC_GDP *100))) %>%
+   mutate(spendrate = tspend/totalmeangdp) %>%
+   
+ ggplot(aes(x= reorder(LOCATION, spendrate), y = spendrate))+
+   geom_bar( stat = "identity", color = "black", fill = "#0C7BDC" )+
+   theme_light() +
+   labs(x = "Country", y = "Total Health Spending Rate (in Millions)")+
+   ggtitle("Total Health Spending Over Time 1970 - 2016") +
+   theme(axis.text.x = element_text(angle = 90)) +
+   labs(caption = " Fig 1: Total Health Spending Over Time Across Full Length of the Dataset")
+  #geom_smooth(method = lm) 
+ 
+ gentime
+```
+
+
+
+```{r}
+#ISAAC CUESTA
+#top ten %GDP spending countries versus bottom ten in 1996
+
+top_bottom_percapspending <- drug_spending %>%
+  filter(TIME == 2000) %>%
+  select(LOCATION, USD_CAP) %>%
+  arrange(desc(USD_CAP)) %>%
+  mutate(TopAndBottom10 = ifelse(row_number() <= 10, "Top 10", ifelse(row_number() > n() - 10, "Bottom 10", "Other"))) %>%
+  filter(TopAndBottom10 !="Other")
+  
+ 
+#top_bottom_percapspending
+  ggplot(top_bottom_percapspending, aes(x = fct_reorder(LOCATION, USD_CAP), y = USD_CAP, fill = TopAndBottom10)) +
+    geom_col(stat = "identity") +
+    scale_fill_manual(values = c("Top 10" = "#FFC20A", "Bottom 10" = "#0C7BDC"), name = "Top and Bottom 10") + 
+    xlab("Country") +
+    ylab("Spending in $USD Per Capita") +
+  ggtitle("10 Highest and 10 Lowest Per Capita Spending Countries in 2000") +
+    coord_flip() +
+  theme_light() +
+    theme(plot.title = element_text(face = "bold")) +
+    labs(caption = " Fig 2: Graph of the Top 10 and Bottom 10 Countries ranked by USD Spent Per Capita in 2000")
+
+#print(top_bottom_percapspending)
+
+
+```
+
+
+
+# Introduction
+#ISAAC CUESTA
+
+The data used in this project was retrieved from DataHub but collected by the Organisation for Economic Cooperation and Development (OECD). It consists of data on OECD nation's spending in millions, as a percentage of their GDP, per capita spending in USD, and as a percentage of their total healthcare spending per year. It tracks this data since 1970 but not each country has data since then. The USA, for example, doesn't see recording until 2000.
+
+The spending by country is measured in a few ways: in millions of USD, as a percentage of their GDP, per capita spending in USD, and as a percentage of their total healthcare spending per year. Per capita spending varies a lot from the other measures because it adjusts for the respective varying populations, giving a context-based look at their spending. We also used spending as a percentage of GDP because we were interested in looking at the economic impact of the 2008 Great Recession of various countries. By factoring in economic changes, we can more clearly see the changes in spending on pharmaceuticals. We focused on 2000 and on because of two reasons. The United States (USA) did not have data in the earlier years and we wanted to use the USA as the focal point and point of comparison for analysis. Also, other countries did not have as much available data, maybe because the country's membership in OECD is what allowed for their data collection. Despite the initial crash in 2008-2009 stemming from the housing market, the resulting meltdown impacted workers, capital-owners, governments, and the international community at all levels and various sectors. We want to analyze how this might have spilled over to the spending by nations and their citizens on healthcare through various means. To counter the effects of the recession, many governments have “slashed the funds and subsidies for many R&D industries and the pharmaceutical industry has been hit most badly” (Raghavendra, Raj, Seetharaman).
+
+We were looking to measure the changes over time in the United States since 2000 to record the impacts of the 2008 Recession on its spending on pharmaceuticals as a percentage of its GDP. To get a better outline of the relative changes, we wanted to compare the changes to a very different country during the same time and use the same metrics. Our hypothesis was that the financial crash and financial downturn of the 2008-2009 Recession would impact nations more based on their region of the world, the . We predicted that the United States would see a much more drastic drop in its percent of its GDP spent on pharmaceuticals because of the constrained budget both institutions and individuals would have. We believed this even though the drop in productive economic activity might result in a drop in GDP, which could proportionately raise the % spent on pharmaceuticals.
+
+We also wanted to compare trends in the countries who spend the most and the least spending based on the various metrics (GDP, per capita, total).We thought there would be trends based on regions of the world that correlated with government structure, size of economy, and cost of healthcare. This made us predict that countries in the Americas generally would see higher rates of spending per capita, with the UnitedFaced with recession, these governments are battling hard to sustain their country’s economy. To
+achieve this they have slashed the funds and subsidies for many R&D industries and the pharmaceutical industry
+has been hit most badly States being the clear outlier, with higher spending per capita than every other nation.
+
+
+# Results
+
+```{r}
+#ISAAC CUESTA
+#Scatter plot of x= percent spending of healthcare  and y= %percent spending of GDP, size=total spent, for all countries in 2008.
+
+
+spendingscatterplot <- drug_spending %>%
+  filter(TIME == 2008) %>%
+  mutate(label = LOCATION, as.character(LOCATION)) %>%
+  ggplot(aes(x =PC_HEALTHXP, y = PC_GDP, color = EUROPE, size = TOTAL_SPEND)) + #CAN CHANGE WHAT COLOR CHANGES TO
+  geom_point() +
+  geom_text_repel(aes(label = label), size = 3.38, max.overlaps = Inf) +
+  xlab("Percent of Healthcare Spending Spent") +
+  ylab("Percent of GDP Spent") +
+  ggtitle("Percent of Healthcare Spending Compared to \nPercent of GDP Spent on Pharmaceuticals in 2008") +
+  theme_light() +
+  theme(plot.title = element_text(face = "bold")) +
+  theme(legend.position = "right") +
+  guides(size = "none") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_color_manual(values = c("#0C7BDC", "#FFC20A"), name = "European Country?")+
+  
+labs(caption = " Fig 3: Scatterplot Comparing % of Healthcare Spending to % of GDP Spending For All Countries in 2008")
+
+print(spendingscatterplot)
+
+
+#scale_x_log10(labels = label_comma()) +
+#scale_y_log10(labels = label_comma()) +
+
+```
+**Isaac’s graph:**
+#ISAAC CUESTA
+
+In this graph we observed the relationship between the percent of healthcare spending as compared to the percent of countries' respective GDP's for all the countries listed in 2008. In this particular year, we saw a general positive trend that shows a correlated increase in percentage of healthcare costs spent on pharmaceuticals as compared to the percent of a country's GDP spent on pharmaceuticals. Because the majority of the countries in this data set are European by virtue of being representative of OECD nations, it was important to identify the differences between those countries and those in the Americas (USA, MEX, CAN, Chile), the Middle East (only Israel), Oceania (Australia), and Asia (Japan, Korea). Some exceptions are notable for falling below and above this trend. Estonia and Latvia fall a bit below the average GDP spent on pharmaceuticals while the USA spends a notably larger percentage of their GDP on pharmaceuticals as compared to their total healthcare spending, about 21% lower than Mexico which shares a close (slightly higher) % of their healthcare spending. 
+
+
+#Manuel Morillo
+```{r}
+
+#MANUEL MORILLO
+# North and South American Spending per Capita (USD) Year 2000
+regSpendAmericas <- drug_spending %>%
+  filter(TIME == 2000) %>%
+  filter(AMERICAS == "Yes") %>%
+  ggplot(aes(x = reorder(LOCATION, USD_CAP), y = USD_CAP))+
+  geom_bar(stat = "identity", color = "#0C7BDC", fill= "#0C7BDC") +
+  labs(y = "Spending in USD Per Capita", x = "Country")+
+  ggtitle("North and South American Spending per Capita (USD) Year 2000") + theme(plot.title = element_text(face = "bold"))+
+  labs(caption = " Fig 10: Graph Showcasing Regional Spending for the Americas in 2000")
+ 
+regSpendAmericas
+
+#European Spending per Capita (USD) Year 2000
+regSpendEurope <- drug_spending %>%
+  filter(TIME == 2000) %>%
+  filter(EUROPE == "Yes") %>%
+  ggplot(aes(x = reorder(LOCATION, USD_CAP), y = USD_CAP))+
+  geom_bar(stat = "identity", color = "#0C7BDC", fill= "#0C7BDC") +
+  labs(y = "Spending in USD Per Capita", x = "Country")+
+  ggtitle("European Spending per Capita (USD) Year 2000 ") + theme(plot.title = element_text(face = "bold")) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(caption = " Fig 11: Graph Showcasing Regional Spending for Europe in 2000")
+  
+  
+
+regSpendEurope
+
+#Oceania, Asia, and Other Small Nations Spending per Capita (USD) Year 2000
+regSpendOther <- drug_spending %>%
+  filter(TIME == 2000) %>%
+  filter(OTHER == "Yes") %>%
+  ggplot(aes(x = reorder(LOCATION, USD_CAP), y = USD_CAP))+
+  geom_bar(stat = "identity", color = "#0C7BDC", fill= "#0C7BDC") +
+  labs(y = "Spending in USD Per Capita", x = "Country")+
+  ggtitle("Oceania, Asia, and Other Small Nations Spending per Capita (USD) Year 2000") + theme(plot.title = element_text(face = "bold"))+
+  labs(caption = " Fig 12: Graph Showcasing Regional Spending for Oceania, Asia, and Other Small Nations in 2000")
+
+regSpendOther
+```
+
+```{r}
+
+#MANUEL MORILLO
+top_bottom_tbl2008 <- drug_spending %>%
+  filter(TIME == 2008) %>%
+  select(LOCATION, PC_HEALTHXP) %>%
+  arrange(desc(PC_HEALTHXP)) %>%
+  mutate(rank = ifelse(row_number() <= 10, "", ifelse(row_number() > n() - 10, "", "Other"))) %>%
+  filter(rank !="Other") %>%
+  kbl(col.names = c("Country ", " 	% of Health Spending ", ""), caption = "Fig 8: Ranking of Top 10 and Bottom 10 Countries by Percentage of Health Spending in 2008") %>%
+  row_spec(1, color = "#FFC20A")%>%
+  row_spec(2, color = "#FFC20A")%>%
+  row_spec(3, color = "#FFC20A")%>%
+  row_spec(4, color = "#FFC20A")%>%
+  row_spec(5, color = "#FFC20A")%>%
+  row_spec(6, color = "#FFC20A")%>%
+  row_spec(7, color = "#FFC20A")%>%
+  row_spec(8, color = "#FFC20A")%>%
+  row_spec(9, color = "#FFC20A")%>%
+  row_spec(10, color = "#FFC20A")%>%
+  row_spec(11, color = "#0C7BDC")%>%
+  row_spec(12, color = "#0C7BDC")%>%
+  row_spec(13, color = "#0C7BDC")%>%
+  row_spec(14, color = "#0C7BDC")%>%
+  row_spec(15, color = "#0C7BDC")%>%
+  row_spec(16, color = "#0C7BDC")%>%
+  row_spec(17, color = "#0C7BDC")%>%
+  row_spec(18, color = "#0C7BDC")%>%
+  row_spec(19, color = "#0C7BDC")%>%
+  row_spec(20, color = "#0C7BDC")%>%
+    kable_material(c("striped", "hover"))%>%
+  kable_styling()
+ 
+    
+
+top_bottom_tbl2008
+
+
+#We had to stop at 2014 instead of the original 2016 due to a lack of usable data as well as to maintain consistency .
+
+top_bottom_tbl2014 <- drug_spending %>%
+  filter(TIME == 2014) %>%
+  select(LOCATION, PC_HEALTHXP) %>%
+  arrange(desc(PC_HEALTHXP)) %>%
+  mutate(rank = ifelse(row_number() <= 10, "", ifelse(row_number() > n() - 10, "", "Other"))) %>%
+  filter(rank !="Other") %>%
+  kbl(col.names = c("Country ", " 	% of Health Spending ", ""), color = "white", caption = "Fig 9: Ranking of Top 10 and Bottom 10 Countries by Percentage of Health Spending in 2014") %>% #FILL/CHANGE ROWS TO BE EASIER SEEN
+  row_spec(1, color = "#FFC20A")%>%
+  row_spec(2, color = "#FFC20A")%>%
+  row_spec(3, color = "#FFC20A")%>%
+  row_spec(4, color = "#FFC20A")%>%
+  row_spec(5, color = "#FFC20A")%>%
+  row_spec(6, color = "#FFC20A")%>%
+  row_spec(7, color = "#FFC20A")%>%
+  row_spec(8, color = "#FFC20A")%>%
+  row_spec(9, color = "#FFC20A")%>%
+  row_spec(10, color = "#FFC20A")%>%
+  row_spec(11, color = "#0C7BDC")%>%
+  row_spec(12, color = "#0C7BDC")%>%
+  row_spec(13, color = "#0C7BDC")%>%
+  row_spec(14, color = "#0C7BDC")%>%
+  row_spec(15, color = "#0C7BDC")%>%
+  row_spec(16, color = "#0C7BDC")%>%
+  row_spec(17, color = "#0C7BDC")%>%
+  row_spec(18, color = "#0C7BDC")%>%
+  row_spec(19, color = "#0C7BDC")%>%
+  row_spec(20, color = "#0C7BDC")%>%
+    kable_material(c("striped", "hover"))%>%
+  kable_styling()
+ 
+top_bottom_tbl2014
+```
+
+**Manuel’s Graphs & Tables:**
+#MANUEL MORILLO
+
+In these graphs we observed the relationship between the total spending per capita in USD by region in the year 2000. Focusing on three distinct regions: the Americas, Europe, and Other (a collective grouping of Oceania, some Asian countries, and other nations that could not otherwise be categorized in the previous groupings), we took an interest in observing the trend between increasing per capita spending between these regions of very distinctly different population sizes, although it is important to note that varying GDPs and other broader contexts influence these changes and trends as well (cost containment, policy, etc…). Notably we found that across all regions the bottom end (lower per capita spending) of nations followed a similar trend of having a total spending per capita of roughly 100 - 180 million USD. Differences were made more clear between regions when comparing the middle to top end of the ranges for each region. Countries in the Americas sat between 300 - 400 million in the middle of the range compared to 200 - 350 million for the middle range of European nations and the very top end of those in the ‘Other’ category. The USA was a clear outlier across all regions and countries analyzed with a total spending per capita that eclipsed even its closest European competitor Italy at over 500 million compared to roughly 450 million. 
+
+The tables above shine a bit more light on what exactly these changes in spending look like on a deeper level. Here we chose to focus further into the future in both 2008 and 2014. We chose these two years to best highlight the changes that the world changing USA market collapse had on pharmaceutical health spending during and after the recession. Overall European and ‘Other’ nations did not have overly significant decreases in their total health spending. This is likely impart to external factors not limited to implementation of cost-containment procedures, new tax rates on medicines, and investments in developing generics of major pharmaceuticals. Comparatively countries in the Americas took a larger decrease on average with major players such as the USA and Mexico dropping by several percent.
+
+
+# Discussion
+#Isaac Cuesta and Manuel Morillo
+
+**Discussion of Isaac’s Graph:**
+
+
+What this reveals is that the real difference in trends in 2008 is not between European and non-European countries, but between the USA and the rest of the OECD nations. Having the fifth highest amount spent as a percentage of its GDP in 2008 is more notable when you consider the large population of the United States and the relatively low percentage pharmaceutical spending makes up in its total healthcare spending. This might be because of the extraordinarily large amount the United States spends on healthcare overall which itself connects to deeper structural differences in the healthcare industry here than in other countries. This is further supported by the fact that in 2008, the United States' total spending was the eighth highest value of the entire dataset, being under only all the later years for the United States (USA, 2009; USA, 2010; USA, 2011 and so forth until 2015). Capturing the state of these nations the year before/during the initial economic shocks of the 2008 Recession is important to contextualize the trends over time we looked at. While exact total spending data isn't visualized here, the increase in dot size represents this. The USA’s notably large dot goes to show the gap between its total spending and every other nation’s. The country’s population of about 300 million at the time tells part of the story as to why this is the case. Other counties near the USA in percentage of healthcare spending spent on pharmaceuticals include Israel and Sweden (one larger and one smaller), which highlights the vast disparity between these smaller nations and the United States. Even though these three countries are spending around the same percent of their healthcare spending (on the lower end compared to other recorded countries), the USA is spending almost double (almost 2%) of its GDP in 2008 while Israel and Sweden are spending slightly below and slightly above 1%. The American healthcare bureaucracy and its business model has been noted to be unique among OECD nations, requiring a higher cost to administer its industry model and less to administer medicine and healthcare itself (Reuters). This might be why despite the consistently largest total spending and outsized percent of GDP spending, the USA saw relatively lower spending as a percent of its total healthcare spending.
+Also, there is a notable concentration of nations that shows that between 1.25% and 1.75% of GDP and between 15% and 20% of healthcare spending is spent on pharmaceuticals. Mexico, Hungary, and Latvia have notably high spending on both axes, which tracks with the general trend of increased spending but represents a notable departure from most other nations' patterns. There is a gap between those nations and the rest suggesting there might be a structural reason behind this divergence. While we noted the economic status of these three nations as being categorically lower in terms of GDP, GDP per capita, exports and imports, and strength of currency, we do not yet know what about their economic status in 2008 might have caused these results. This being a snapshot of these nations before the full repercussions of the 2008 Recession were globalized is important to note. By looking at our other graphs can we better paint the picture of the change over time and the role a global financial crisis might have played. The size of a nation’s population, GDP, pre existing per capita spending, and healthcare and insurance model all play a role in defining the impact this had on them and the resulting changes in spending. As some evidence suggests, the amount and kind of policies implemented post-recession impacted the costs of pharmaceuticals in subsequent years. One study suggests that Latvia (along with other Baltic states) had some of the most measures implemented, influencing its reductions to various parts of its pharmaceutical industry.
+
+**Discussion of Manuel’s Graphs & Tables:**
+
+
+These graphs and tables suggest that the most notable trends in pharmaceutical spending are not solely the trends related to a nation’s GDP or spend per capita but rather a nation’s total pharmaceutical spending and health infrastructure. Compared to the rest of the OECD nations the USA remained a clear outlier. With a total spending per capita rate significantly higher than any other nation and a dwindling total health spending rate after the 2008 recession these graphs and tables showcase a trend that implicate the real cause behind changes in pharmaceutical spending to be a growing population and poorly structured healthcare system. This is emphasized even more after the 2008 recession where total spending per capita increase despite a trend of decreasing percentage of total health spending. Having a larger population than its other OECD counterparts and a healthcare system that by design requires more upfront costs is likely shifting away funds from pharmaceutical spending to other areas in the healthcare space that need it. 
+
+These findings could be further elaborated on with more specific data on non-OECD nations, population statistics, and more detailed information on health spending by sector, though our interpretation of the data is limited to the data set and assumptions that can be made based on other notable external factors. Should we have the opportunity to explore this topic further it may be worth using more specific data to note any important trends and verify on a deeper level where pharmaceutical spending in the healthcare space in shifting as the total spending per capita increases year after year. 
+
+
+# Author Contributions 
+
+Formulation of all overarching questions was done by both Manuel and Isaac. Graphs were split and worked on equally but attribution was given to the person who ended up fixing or finalizing the chart. Credit can be found in the comments above eat chart. Writing was completed as a collaborative process with each person contributing to each others thought process, but completing a more thorough breakdown individually. 
+
+# Supplemental Materials
+
+```{r}
+#ISAAC CUESTA
+#American Trend of Spending Percent of GDP (2000-2014)
+
+usspending <- drug_spending %>%
+  filter(LOCATION == "USA") %>%
+  ggplot(aes(x = TIME, y = as.factor(PC_GDP), group = 1)) + #for some reason i needed to specify group=1 bc the limited obs wouldnt show up
+  geom_line(color = "#0C7BDC", size = 1) +
+  geom_point(color = "#FFC20A", size = 3) +
+  geom_area(fill = "#0C7BDC", alpha = .42) +
+  xlab("Year") +
+  ylab("Spending as % of GDP") +
+  ggtitle("United States Per Capita Spending as % of GDP") +
+  theme_light() +
+  theme(plot.title = element_text(face = "bold")) +
+  scale_x_continuous(breaks = seq(2000, 2014, 1)) +
+  labs(caption = " Fig 4: Graph Showcasing the Trend of American Spending % GDP 2000-2014. Size correlates to total spending in millions of USD.")
+
+print(usspending)
+
+
+#Japanese Trend of Spending as Percent of GDP (2000-2014) #2015 has no data
+
+japanspending <- drug_spending %>%
+  filter(LOCATION == "JPN") %>%
+  ggplot(aes(x = TIME, y = as.factor(PC_GDP), group = 1)) + #for some reason i needed to specify group=1 bc the limited obs wouldnt show up
+  geom_line(color = "#0C7BDC", size = 1) +
+  geom_point(color = "#FFC20A", size = 3) +
+  geom_area(fill = "#0C7BDC", alpha = .42) +
+  xlab("Year") +
+  ylab("Spending as % of GDP") +
+  ggtitle("Japan Per Capita Spending as % of GDP") +
+  theme_light() +
+  theme(plot.title = element_text(face = "bold")) +
+  scale_x_continuous(limits = c(2000, 2014), breaks = seq(2000, 2014, 1))+
+  labs(caption = " Fig 5: Graph Showcasing the Trend of Japanese Spending % GDP 2000-2014")
+
+print(japanspending)
+
+
+#French Trend of Spending Percent of GDP (2000-2015)
+
+frenchspending <- drug_spending %>%
+  filter(LOCATION == "FRA") %>%
+  ggplot(aes(x = TIME, y = as.factor(PC_GDP), group = 1)) + #for some reason i needed to specify group=1 bc the limited obs wouldnt show up
+  geom_line(color = "#0C7BDC", size = 1) +
+  geom_point(color = "#FFC20A", size = 3) +
+  geom_area(fill = "#0C7BDC", alpha = .42) +
+  xlab("Year") +
+  ylab("Spending as % of GDP") +
+  ggtitle("France Per Capita Spending as % of GDP") +
+  theme_light() +
+  theme(plot.title = element_text(face = "bold")) +
+  scale_x_continuous(limits = c(2000, 2014), breaks = seq(2000, 2014, 1))+
+  labs(caption = " Fig 6: Graph Showcasing the Trend of French Spending % GDP 2000-2014")
+
+print(frenchspending)
+
+
+
+
+#Australian Trend of Spending Percent of GDP (2000-2015)
+
+australianspending <- drug_spending %>%
+  filter(LOCATION == "AUS") %>%
+  ggplot(aes(x = TIME, y = as.factor(PC_GDP), group = 1)) + #for some reason i needed to specify group=1 bc the limited obs wouldnt show up
+  geom_line(color = "#0C7BDC", size = 1) +
+  geom_point(color = "#FFC20A", size = 3) +
+  geom_area(fill = "#0C7BDC", alpha = .42) +
+  xlab("Year") +
+  ylab("Spending as % of GDP") +
+  ggtitle("Australia Per Capita Spending as % of GDP") +
+  theme_light() +
+  theme(plot.title = element_text(face = "bold")) +
+  scale_x_continuous(limits = c(2000, 2014), breaks = seq(2000, 2014, 1))+
+  labs(caption = " Fig 7: Graph Showcasing the Trend of Australian Spending % GDP 2000-2014")
+print(australianspending)
+
+
+
+```
+
+
+
+# References
+
+
+**Works Cited**
+
+Carroll, Linda. “More than a third of U.S. healthcare costs go to bureaucracy.” Reuters, Reuters, 6 January 2020, https://www.reuters.com/article/us-health-costs-administration/more-than-a-third-of-u-s-healthcare-costs-go-to-bureaucracy-idUSKBN1Z5261. Accessed March 2023.
+Chill Lofi Beats. “Chill Lofi Beats 🌸 [chill lo-fi hip hop beats].” YouTube, Chill Lofi Beats, https://www.youtube.com/watch?v=d5aL5eP7SrI&ab_channel=LofiZone. Accessed 17 March 2023.
+core. “Pharmaceutical Drug Spending by countries - Dataset.” DataHub.io, OECD, https://datahub.io/core/pharmaceutical-drug-spending#readme. Accessed 17 March 2023.
+Malcom-White, Emily. “Intro to Data Science HWs.” 2023, https://middlebury.instructure.com/courses/11864/assignments. Accessed 2023.
+Merle, Renae. “A guide to the financial crisis — 10 years later.” The Washington Post, 10 September 2018, https://www.washingtonpost.com/business/economy/a-guide-to-the-financial-crisis--10-years-later/2018/09/10/114b76ba-af10-11e8-a20b-5f4f84429666_story.html. Accessed March 2023.
+M.S. Raghavendra, John R. Raj, A. Seetharaman. A study of decrease in R&D spending in the pharmaceutical industry during post-recession. International Journal of Academic Research Part B; 2012; 4(5), 29-47. DOI: 10.7813.2075-4124.2012/4-5/B.6
+Nichols, David. “Coloring for Colorblindness.” https://davidmathlogic.com/colorblind/#%23FFC20A-%230C7BDC. Accessed 17 March 2023.
+Vogler S, Zimmermann N, Leopold C, de Joncheere K. Pharmaceutical policies in European countries in response to the global financial crisis. South Med Rev. 2011 Dec;4(2):69-79. doi: 10.5655/smr.v4i2.1004. Epub 2011 Dec 2. PMID: 23093885; PMCID: PMC3471176.
+Wei, Dr. Ying. “Colors in R.” Colors in R, Department of Biostatistics, http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf. Accessed 17 March 2023.
+Wikipedia. “OECD Nations in 2008 in Blue.” Wikipedia, 2008, https://upload.wikimedia.org/wikipedia/commons/2/26/OECD_Countries_Blue.png. Accessed March 2023.

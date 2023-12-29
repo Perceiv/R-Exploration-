@@ -1,0 +1,73 @@
+---
+title: "Final Project - Insert your Title Here"
+author: "Your Name Here"
+output:
+  html_document:
+    code_folding: hide
+---
+
+
+# Introduction 
+
+# Results
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(spData)
+library(usmap)
+library(leaflet)
+data(us_states)
+devtools::install_github("UrbanInstitute/urbnmapr")
+
+library(urbnmapr)
+```
+
+```{r}
+#import your dataset in this chunk
+
+us_shootings<- read.csv("C:/Users/manue/Desktop/r final/shooting_1982-2023_cleaned.csv")
+county_sc <- read.csv("C:/Users/manue/Desktop/r final/social_capital_county.csv")
+```
+
+```{r}
+#use this chunk to create a graph and/or calculate a summary statistic
+
+ us_shootings %>%
+  arrange(-fatalities) %>%
+  slice(1:10)%>%
+  ggplot(aes(x = reorder(case,fatalities), y = fatalities))+
+  geom_bar(stat = "identity") +
+  coord_flip()
+
+
+us_shootings %>%
+  arrange(-total_victims) %>%
+  slice(1:10)%>%
+  ggplot(aes(x = reorder(location,total_victims), y = total_victims))+
+  geom_bar(stat = "identity") +
+  coord_flip()
+```
+```{r}
+us_states %>%
+  ggplot()+
+  geom_sf()+
+  theme_light()+
+  geom_point(data = us_shootings, aes(x= longitude, y = latitude, size = fatalities, color = total_victims))+
+  scale_size(range = c(0.2,5), breaks=c(0,1,10,100,1000,10000,100000))+
+coord_sf(xlim = c(-130, -65),
+ylim = c(20, 50)) 
+
+```
+```{r}
+counties_sf <- get_urbn_map("counties", sf = TRUE)
+  
+counties_sf %>%
+  ggplot(aes())+
+  geom_sf(county_sc, mapping = aes(),fill = "ec_county")
+  
+```
+
+
+
+# Discussion 
+
